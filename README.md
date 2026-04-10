@@ -12,63 +12,19 @@ A Go package providing shared color palette primitives for the DevOpsMaestro eco
 
 Zero external Go dependencies. Pure stdlib.
 
-## Installation
-
-```sh
-go get github.com/rmkohlman/MaestroPalette
-```
-
 ## Usage
 
 ### Building and using a Palette
 
-```go
-import "github.com/rmkohlman/MaestroPalette"
-
-p := &palette.Palette{
-    Name:     "my-theme",
-    Category: palette.CategoryDark,
-    Colors: map[string]string{
-        palette.ColorBg:    "#1a1b26",
-        palette.ColorFg:    "#c0caf5",
-        palette.ColorError: "#f7768e",
-    },
-}
-
-// Retrieve a color, or a default if missing
-bg := p.GetOrDefault(palette.ColorBg, "#000000")
-
-// Merge another palette without overwriting existing keys
-p.Merge(overlay, false)
-
-// Deep copy
-clone := p.Clone()
-```
+Create a `Palette` with a name, category, and `Colors` map of semantic keys to hex values. Use `GetOrDefault(key, fallback)` to read colors safely. `Merge(other, overwrite)` copies colors from another palette — pass `false` to preserve existing keys. `Clone()` creates a deep copy.
 
 ### Working with HSL
 
-```go
-// Convert a hex color to HSL, manipulate it, convert back
-hsl, err := palette.HexToHSL("#7aa2f7")
-if err != nil {
-    // handle error
-}
-
-lighter := hsl.Lighten(0.1)   // increase lightness by 10%
-rotated := hsl.Rotate(30)     // rotate hue by 30 degrees
-hex := rotated.ToHex()        // back to "#rrggbb"
-```
+Convert a hex color to `HSL` with `HexToHSL`, manipulate it with `Lighten`, `Darken`, `Rotate`, `Saturate`, or `Desaturate`, then convert back to hex with `ToHex()`.
 
 ### Extracting terminal colors
 
-```go
-// Map semantic palette colors to the ANSI 16-color terminal set
-termColors := p.ToTerminalColors()
-// termColors["ansi_red"], termColors["ansi_blue"], etc.
-
-// Or create a new Palette containing only terminal-relevant colors
-termPalette := p.TerminalPalette()
-```
+`ToTerminalColors()` maps semantic palette colors to the ANSI 16-color terminal set using fallback chains. `TerminalPalette()` returns a new palette containing only terminal-relevant colors.
 
 ## Documentation
 

@@ -2,92 +2,52 @@
 
 The `Palette` struct is the core type in MaestroPalette. It holds a named set of hex color values keyed by semantic string constants, along with metadata fields and optional prompt color overrides.
 
-## Type Definition
+## Fields
 
-```go
-type Palette struct {
-    Name         string            `yaml:"name"                    json:"name"`
-    Description  string            `yaml:"description,omitempty"   json:"description,omitempty"`
-    Author       string            `yaml:"author,omitempty"        json:"author,omitempty"`
-    Category     Category          `yaml:"category,omitempty"      json:"category,omitempty"`
-    Colors       map[string]string `yaml:"colors,omitempty"        json:"colors,omitempty"`
-    PromptColors map[string]string `yaml:"promptColors,omitempty"  json:"promptColors,omitempty"`
-}
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| `Name` | `string` | Palette name (required by `Validate`) |
+| `Description` | `string` | Human-readable description (optional) |
+| `Author` | `string` | Author name (optional) |
+| `Category` | `Category` | `"dark"`, `"light"`, or `"both"` (optional) |
+| `Colors` | `map[string]string` | Semantic color key → hex value |
+| `PromptColors` | `map[string]string` | Optional overrides for Starship prompt segments |
 
 Colors are stored as hex strings (e.g., `"#1a1b26"`). The map keys are the semantic color key constants defined in this package.
 
-`PromptColors` provides optional overrides for Starship prompt segments. Keys are Catppuccin-style names (`red`, `peach`, `sky`, etc.) and values are hex colors. When present these override the default segment color mappings when generating a `starship.toml` palette.
+`PromptColors` provides optional overrides for Starship prompt segments. Keys are Catppuccin-style names (`red`, `peach`, `sky`, etc.) and values are hex colors. When present, these override the default segment color mappings when generating a `starship.toml` palette.
 
 ## Category
 
-```go
-type Category string
-
-const (
-    CategoryDark  Category = "dark"
-    CategoryLight Category = "light"
-    CategoryBoth  Category = "both"
-)
-```
-
-`Validate` enforces that `Category` is one of these three values if set.
+`Category` is one of `"dark"`, `"light"`, or `"both"`. `Validate` enforces that `Category` is one of these three values if set.
 
 ## Methods
 
 ### Get
 
-```go
-func (p *Palette) Get(key string) string
-```
-
 Returns the color value for `key`, or an empty string if the key is not present or `Colors` is nil.
 
 ### GetOrDefault
-
-```go
-func (p *Palette) GetOrDefault(key, defaultColor string) string
-```
 
 Returns the color value for `key` if it exists and is non-empty. Returns `defaultColor` otherwise.
 
 ### Set
 
-```go
-func (p *Palette) Set(key, value string)
-```
-
 Sets the color value for `key`. Initializes the `Colors` map if it is nil.
 
 ### Has
-
-```go
-func (p *Palette) Has(key string) bool
-```
 
 Returns `true` if `key` exists in `Colors`, regardless of the value. Returns `false` if `Colors` is nil.
 
 ### GetPromptColor
 
-```go
-func (p *Palette) GetPromptColor(key string) string
-```
-
 Returns the prompt color override for `key`, or an empty string if `PromptColors` is nil or the key is absent.
 
 ### HasPromptColors
 
-```go
-func (p *Palette) HasPromptColors() bool
-```
-
 Returns `true` if `PromptColors` is non-nil and has at least one entry.
 
 ### Validate
-
-```go
-func (p *Palette) Validate() error
-```
 
 Checks that:
 
@@ -99,52 +59,26 @@ Returns a descriptive error on the first violation found, or `nil` if valid.
 
 ### Merge
 
-```go
-func (p *Palette) Merge(other *Palette, overwrite bool)
-```
+Copies all color entries from `other.Colors` into `Colors`. If `overwrite` is `false`, existing keys are not replaced. If `other` is nil or `other.Colors` is nil, Merge is a no-op. Initializes `Colors` if nil.
 
-Copies all color entries from `other.Colors` into `p.Colors`. If `overwrite` is `false`, existing keys in `p` are not replaced. If `other` is nil or `other.Colors` is nil, Merge is a no-op. Initializes `p.Colors` if nil.
-
-```go
-// Add colors from overlay without replacing existing ones
-p.Merge(overlay, false)
-
-// Replace all conflicting keys with overlay values
-p.Merge(overlay, true)
-```
+- `Merge(overlay, false)` — adds colors from overlay without replacing existing ones
+- `Merge(overlay, true)` — replaces all conflicting keys with overlay values
 
 ### Clone
 
-```go
-func (p *Palette) Clone() *Palette
-```
-
-Returns a deep copy of the palette. All fields are copied. Both `Colors` and `PromptColors` maps are duplicated so mutations to the clone do not affect the original. Returns `nil` if called on a nil `*Palette`.
+Returns a deep copy of the palette. All fields are copied. Both `Colors` and `PromptColors` maps are duplicated so mutations to the clone do not affect the original. Returns `nil` if called on a nil palette.
 
 ### ToTerminalColors
 
-```go
-func (p *Palette) ToTerminalColors() map[string]string
-```
+Extracts an ANSI 16-color terminal palette from the semantic palette colors. Returns a `map[string]string` keyed by the `Term*` and `Color{Bg,Fg}` constants. Each terminal slot is resolved through a fallback chain — for example `TermRed` resolves the first non-empty value found among keys `"red"` then `"error"`.
 
-Extracts an ANSI 16-color terminal palette from the semantic palette colors. Returns a `map[string]string` keyed by the `Term*` and `Color{Bg,Fg}` constants. Each terminal slot is resolved through a fallback chain -- for example `TermRed` resolves the first non-empty value found among keys `"red"` then `ColorError`.
-
-Empty-valued entries are removed from the result. Returns `nil` if called on a nil `*Palette`. Returns an empty (non-nil) map if `Colors` is nil.
+Empty-valued entries are removed from the result. Returns `nil` if called on a nil palette. Returns an empty (non-nil) map if `Colors` is nil.
 
 See [Terminal color fallback chains](#terminal-color-fallback-chains) below for the full mapping.
 
 ### TerminalPalette
 
-```go
-func (p *Palette) TerminalPalette() *Palette
-```
-
-Creates a new `Palette` containing only terminal-relevant colors. The new palette has the same `Description`, `Author`, and `Category` as the receiver; `Name` is set to `<original-name>-terminal`; and `Colors` is the result of `ToTerminalColors()`. Returns `nil` if called on a nil `*Palette`.
-
-```go
-term := p.TerminalPalette()
-// term.Name == "my-theme-terminal"
-```
+Creates a new `Palette` containing only terminal-relevant colors. The new palette has the same `Description`, `Author`, and `Category` as the receiver; `Name` is set to `<original-name>-terminal`; and `Colors` is the result of `ToTerminalColors()`. Returns `nil` if called on a nil palette.
 
 ## Terminal Color Fallback Chains
 
@@ -287,20 +221,6 @@ These are the keys used in the map returned by `ToTerminalColors` and `TerminalP
 
 ## AllColorKeys and RequiredColors
 
-```go
-func AllColorKeys() []string
-```
+`AllColorKeys()` returns a slice of all 23 semantic color key constants (backgrounds, foregrounds, UI, diagnostics, accents). Does not include standard color names or terminal ANSI keys.
 
-Returns a slice of all 23 semantic color key constants (backgrounds, foregrounds, UI, diagnostics, accents). Does not include standard color names or terminal ANSI keys.
-
-```go
-var RequiredColors = []string{
-    ColorBg,
-    ColorFg,
-    ColorError,
-    ColorWarning,
-    ColorInfo,
-}
-```
-
-`RequiredColors` is a package-level variable listing the five color keys considered the minimum for a complete theme.
+`RequiredColors` is a package-level variable listing the five color keys considered the minimum for a complete theme: `ColorBg`, `ColorFg`, `ColorError`, `ColorWarning`, `ColorInfo`.

@@ -16,92 +16,23 @@ Zero external Go dependencies. Pure stdlib.
 | HSL color space | Struct and functions for converting, lightening, darkening, rotating, saturating, and desaturating colors |
 | Terminal extraction | Mapping semantic palette colors to the ANSI 16-color set with fallback chains |
 
-## Installation
-
-```sh
-go get github.com/rmkohlman/MaestroPalette
-```
-
 ## Quick Start
 
 ### Build a palette and read colors
 
-```go
-import "github.com/rmkohlman/MaestroPalette"
-
-p := &palette.Palette{
-    Name:     "my-theme",
-    Category: palette.CategoryDark,
-    Colors: map[string]string{
-        palette.ColorBg:    "#1a1b26",
-        palette.ColorFg:    "#c0caf5",
-        palette.ColorError: "#f7768e",
-        palette.ColorInfo:  "#7aa2f7",
-    },
-}
-
-if err := p.Validate(); err != nil {
-    // handle validation error
-}
-
-bg := p.GetOrDefault(palette.ColorBg, "#000000") // "#1a1b26"
-```
+Create a `Palette` with a name, category, and `Colors` map of semantic keys to hex values. Call `Validate()` to confirm it's complete, then use `GetOrDefault(key, fallback)` to read colors safely.
 
 ### Merge and clone
 
-```go
-base := &palette.Palette{
-    Name: "base",
-    Colors: map[string]string{
-        palette.ColorBg: "#000000",
-        palette.ColorFg: "#ffffff",
-    },
-}
-
-overlay := &palette.Palette{
-    Name: "overlay",
-    Colors: map[string]string{
-        palette.ColorBg:    "#1a1b26",
-        palette.ColorError: "#ff0000",
-    },
-}
-
-// Merge overlay into a clone of base; do not overwrite existing keys
-merged := base.Clone()
-merged.Merge(overlay, false)
-// merged.Get(palette.ColorBg) == "#000000"  (not overwritten)
-// merged.Get(palette.ColorError) == "#ff0000" (added)
-```
+`Clone()` creates a deep copy. `Merge(other, overwrite)` copies colors from another palette — pass `false` to preserve existing keys, `true` to let the other palette override them.
 
 ### HSL color manipulation
 
-```go
-hsl, err := palette.HexToHSL("#7aa2f7")
-if err != nil {
-    // handle error
-}
-
-// Lighten by 10 percentage points of lightness
-lighter := hsl.Lighten(0.1)
-
-// Rotate hue by 30 degrees
-rotated := hsl.Rotate(30)
-
-// Convert back to hex
-hex := rotated.ToHex() // e.g. "#rrggbb"
-```
+Convert a hex color to `HSL` with `HexToHSL`, then use `Lighten`, `Darken`, `Rotate`, `Saturate`, or `Desaturate` to adjust it. Convert back to hex with `ToHex()`.
 
 ### Extract terminal colors
 
-```go
-// Map semantic palette colors to the ANSI 16-color terminal set
-termColors := p.ToTerminalColors()
-// termColors[palette.TermRed], termColors[palette.TermBlue], etc.
-
-// Or produce a new Palette containing only the terminal-relevant colors
-termPalette := p.TerminalPalette()
-// termPalette.Name == "my-theme-terminal"
-```
+`ToTerminalColors()` maps semantic palette colors to the ANSI 16-color terminal set using fallback chains. `TerminalPalette()` returns a new palette containing only the terminal-relevant colors, named `<original-name>-terminal`.
 
 ## Further Reading
 
